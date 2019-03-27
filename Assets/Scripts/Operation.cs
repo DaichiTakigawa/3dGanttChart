@@ -8,4 +8,5 @@ public class Operation
     public List<int> t1;
     public List<int> t2;
     public List<int> pTom;
+    public List<int> mTop;
 }

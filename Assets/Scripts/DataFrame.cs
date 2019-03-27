@@ -22,6 +22,7 @@ public class DataFrame
     public int MAX_C = 8;
 
     public long gross_profit, cost_sum, total_profit;
+    public List<int> deadLineViolationOrders;
 
     void readProblem() {
         /* input.txt　の読み込み */
@@ -135,6 +136,10 @@ public class DataFrame
                 operations[r].t1 = new List<int>(operations[r].bom.p);
                 operations[r].t2 = new List<int>(operations[r].bom.p);
                 operations[r].pTom = new List<int>(operations[r].bom.p);
+                operations[r].mTop = new List<int>(M);
+                for (int _m = 0; _m < M; ++_m) {
+                    operations[r].mTop.Add(-1);
+                }
                 for (int _p = 0; _p < operations[r].bom.p; ++_p) {
                     operations[r].t1.Add(0);
                     operations[r].t2.Add(0);
@@ -142,6 +147,7 @@ public class DataFrame
                 }
             }
             operations[r].pTom[p] = m;
+            operations[r].mTop[m] = p;
             operations[r].t1[p] = t1;
             operations[r].t2[p] = t2;
         }
@@ -154,10 +160,14 @@ public class DataFrame
     }
 
     void evaluate() {
+        deadLineViolationOrders = new List<int>();
         for (int r = 0; r < R; ++r) {
             int d = (orders[r].d - 1) * SECONDS_A_DAY;
             int t2 = operations[r].t2[operations[r].t2.Count - 1];
-            if (t2 <= d) gross_profit += orders[r].pr;
+            if (t2 <= d) gross_profit += orders[r].pr; 
+            else {
+                deadLineViolationOrders.Add(r);
+            }
         }
 
         double tmp_cost = 0;

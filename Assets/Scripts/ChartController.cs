@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Rendering;
 
 public class ChartController : MonoBehaviour
 {
@@ -27,6 +28,8 @@ public class ChartController : MonoBehaviour
     private GameObject OperationCube;
     [SerializeField]
     private Shader shader;
+    [SerializeField]
+    private GameObject timeLinePrehab;
     private float planeWidth, planeHeight;
     private float chartWidth, chartHeight;
     private float chartX, chartZ;
@@ -35,6 +38,7 @@ public class ChartController : MonoBehaviour
     private float dayWidth;
     private float machineWidth;
     private int maxCLabel;
+    private GameObject timeLine;
     public DataFrame dataFrame;
 
 
@@ -182,7 +186,78 @@ public class ChartController : MonoBehaviour
                     t1 = Mathf.Min(t2, nDay*DataFrame.SECONDS_A_DAY);
                 }
             }
+       } 
+
+        /* 区切り用の半透明Planeを配置 */
+        for (int d = 1; d <= dataFrame.MAX_D; ++d) {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.transform.SetParent(chart.transform);
+            float width = chartY + chartDepthPerI*(dataFrame.I-0.5f);
+            float height = chartHeight + padding;
+            float x = chartX+(chartWidth/dataFrame.MAX_D)*d - 0.01f;
+            float z = chartZ - chartHeight;
+            float y = 0;
+            go.transform.localScale = new Vector3(width, 0.1f, height);
+            go.transform.position = mtr(new Vector3(x, y+width/2, z+height/2));
+            go.transform.rotation = this.transform.rotation;
+            go.transform.rotation *= Quaternion.Euler(0, 0, 90f);
+            MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
+            setFadeMaterial(meshRenderer, new Color(0.5f, 0.5f, 0, 0.2f));
+        }
+        for (int m = 0; m < dataFrame.M; ++m) {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.transform.SetParent(chart.transform);
+            float width = chartWidth + padding;
+            float height = chartY + chartDepthPerI*(dataFrame.I-0.5f);
+            float x = chartX - padding;
+            float z = chartZ-(chartHeight/dataFrame.M)*(m+1) - 0.01f;
+            float y = 0;
+            go.transform.localScale = new Vector3(width, 0.1f, height);
+            go.transform.position = mtr(new Vector3(x+width/2, y+height/2, z));
+            go.transform.rotation = this.transform.rotation;
+            go.transform.rotation *= Quaternion.Euler(90f, 0, 0);
+            MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
+            setFadeMaterial(meshRenderer, new Color(0.5f, 0.5f, 0, 0.2f));
+        }
+
+        /* 時間を表す半透明Planeを配置 */
+        {
+            timeLine = Instantiate(timeLinePrehab);
+            timeLine.transform.SetParent(chart.transform);
+            float width = chartY + chartDepthPerI*dataFrame.I;
+            float height = chartHeight + padding;
+            float x = chartX - 0.01f;
+            float z = chartZ - chartHeight;
+            float y = 0;
+            timeLine.transform.localScale = new Vector3(width, 0.1f, height);
+            timeLine.transform.position = mtr(new Vector3(x, y+width/2, z+height/2));
+            timeLine.transform.rotation = this.transform.rotation;
+            timeLine.transform.rotation *= Quaternion.Euler(0, 0, 90f);
         }
     }
-    
+
+    private void setFadeMaterial(MeshRenderer meshRenderer, Color color) {
+        meshRenderer.material = new Material(shader);
+        meshRenderer.material.color = color;
+        meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        meshRenderer.material.SetOverrideTag("RenderType", "Transparent");
+        meshRenderer.material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        meshRenderer.material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        meshRenderer.material.SetInt("_ZWrite", 0);
+        meshRenderer.material.DisableKeyword("_ALPHATEST_ON");
+        meshRenderer.material.EnableKeyword("_ALPHABLEND_ON");
+        meshRenderer.material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+        meshRenderer.material.renderQueue = 3000; 
+        return;
+    }
+
+    public void updateTimeLine(int time) {
+        float width = chartY + chartDepthPerI*dataFrame.I;
+        float height = chartHeight + padding;
+        float x = chartX + (float)(time)/(dataFrame.MAX_D*DataFrame.SECONDS_A_DAY)*chartWidth - 0.01f;
+        float z = chartZ - chartHeight;
+        float y = 0;
+        timeLine.transform.position = mtr(new Vector3(x, y+width/2, z+height/2));
+        return;
+    }
 }
