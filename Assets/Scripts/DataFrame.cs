@@ -146,6 +146,7 @@ public class DataFrame
                     operations[r].pTom.Add(0);
                 }
             }
+            operations[r].r = r;
             operations[r].pTom[p] = m;
             operations[r].mTop[m] = p;
             operations[r].t1[p] = t1;

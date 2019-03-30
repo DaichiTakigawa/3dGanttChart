@@ -149,6 +149,10 @@ MonoBehaviour:
   currentTime: 0
   currentMtoR: 
   poseflag: 0
+  MachinePrehab: {fileID: 4257849982454295108, guid: f7cf502bd005178b58ed85d3a501db82,
+    type: 3}
+  BarrelPrehab: {fileID: 4660447969203963870, guid: 4dda0eb085e7716e3bd26facd7912317,
+    type: 3}
 --- !u!4 &68474671
 Transform:
   m_ObjectHideFlags: 0
@@ -226,7 +230,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 103075375}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 50, y: 115, z: 60}
+  m_LocalPosition: {x: 100.7, y: 115, z: 60}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 815280508}
@@ -641,7 +645,7 @@ MonoBehaviour:
       Version=1.0.0.0, Culture=neutral, PublicKeyToken=null
   m_FontData:
     m_Font: {fileID: 12800000, guid: bc859a769a8e0948491a3ff00a182bf4, type: 3}
-    m_FontSize: 100
+    m_FontSize: 68
     m_FontStyle: 0
     m_BestFit: 0
     m_MinSize: 0
@@ -961,13 +965,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 648792193}
-  m_LocalRotation: {x: -0.2426568, y: -0, z: -0, w: 0.9701122}
-  m_LocalPosition: {x: 100, y: 1.6, z: 4.1}
+  m_LocalRotation: {x: 0.3362698, y: 0.33387175, z: -0.12888175, w: 0.8711153}
+  m_LocalPosition: {x: 2.2687569, y: 168.91718, z: 2.5271378}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: -28.087002, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 27.728, y: 32.151, z: -0.054}
 --- !u!114 &648792197
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -980,10 +984,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c148fef2d86578d27ab263d369e37e27, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  move_speed: 100
+  move_speed: 2
   rotate_speed: 1
-  mouse_move_speed: 2
-  pan_speed: 100
+  mouse_move_speed: 1
+  pan_speed: 10
 --- !u!45 &648792198
 Skybox:
   m_ObjectHideFlags: 0

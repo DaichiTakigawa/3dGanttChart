@@ -5,8 +5,7 @@ using UnityEngine.UI;
 
 public class Supervisor : MonoBehaviour
 {
-    [SerializeField]
-    private float timeSpeed = 1f;
+    public float timeSpeed = 1f;
     private float floatTime = 0f;
     private int maxTime;
     public DataFrame dataFrame;
@@ -17,6 +16,11 @@ public class Supervisor : MonoBehaviour
     public int currentTime = 0;
     public List<int> currentMtoR;
     public bool poseflag = true;
+    [SerializeField]
+    private GameObject MachinePrehab;
+    [SerializeField]
+    private GameObject BarrelPrehab;
+    private int nextR = 0;
 
 
     // Start is called before the first frame update
@@ -31,7 +35,8 @@ public class Supervisor : MonoBehaviour
     }
 
     void FixedUpdate() {
-        floatTime += Time.fixedDeltaTime * timeSpeed;
+        
+        if (!poseflag) floatTime += Time.fixedDeltaTime * timeSpeed;
         floatTime = Mathf.Min(floatTime, maxTime);
     }
 
@@ -50,6 +55,7 @@ public class Supervisor : MonoBehaviour
                 capacityText.text = currentCapaOfTime(currentTime);
                 timeText.text = timeFormatter(currentTime, true);
                 chartController.updateTimeLine(currentTime);
+                if (nextR < dataFrame.R && dataFrame.operations[nextR].t1[0] <= nTime) createBarrel(nextR++);
             }
         }
     }
@@ -60,6 +66,11 @@ public class Supervisor : MonoBehaviour
             currentMtoR.Add(0);
         }
         maxTime = dataFrame.MAX_D*DataFrame.SECONDS_A_DAY;
+        for (int m = 0; m < dataFrame.M; ++m) {
+            GameObject go = Instantiate(MachinePrehab);
+            go.GetComponent<MachineController>().init(m, dataFrame.M);
+            go.name = "machine" + m;
+        }
     }
     void updateSituation(int time) {
         for (int m = 0; m < dataFrame.M; ++m) {
@@ -107,7 +118,7 @@ public class Supervisor : MonoBehaviour
         } else {
             currentData += "\tオーダ番号: ";
             for (int i = 0; i < dataFrame.deadLineViolationOrders.Count; ++i) {
-                currentData += dataFrame.deadLineViolationOrders[i].ToString();
+                currentData += (dataFrame.deadLineViolationOrders[i]+1).ToString();
                 if (i+1 != dataFrame.deadLineViolationOrders.Count) currentData += ", ";
                 else currentData += "\n";
             }
@@ -118,20 +129,20 @@ public class Supervisor : MonoBehaviour
             currentData += "\t設備番号: " + (m+1) + "\n";
             int r = currentMtoR[m];
             if (r == dataFrame.R) {
-                currentData += "\t\tなし\n\n\n";
+                currentData += "\t\tなし\n\n";
                 continue;
             }
             Operation ope = dataFrame.operations[r];
             int p = ope.mTop[m];
             if (time < ope.t1[p]) {
-                currentData += "\t\tなし\n\n\n";
+                currentData += "\t\tなし\n\n";
             } else {
                 currentData += "\t\tオーダ番号: " + (r+1) + ", ";
                 currentData += "品目番号: " + (ope.bom.i+1) + ", ";
                 currentData += "工程番号: " + (p+1) + "\n";
                 currentData += "\t\t製造開始時間: " + timeFormatter(ope.t1[p], true) + "(" + ope.t1[p] + "s), ";
-                currentData += "製造終了時間: " + timeFormatter(ope.t2[p], true) + "(" + ope.t2[p] + "s)\n";
-                currentData += "\t\t製造終了までの残り時間: " + timeFormatter(ope.t2[p]-time, false) + "(" + (ope.t2[p]-time) +  "s)\n";
+                currentData += "製造終了時間: " + timeFormatter(ope.t2[p], true) + "(" + ope.t2[p] + "s), ";
+                currentData += "製造終了までの残り時間: " + timeFormatter(ope.t2[p]-time, false) + "(" + (ope.t2[p]-time) +  "s)\n";
             }
         }
 
@@ -161,7 +172,9 @@ public class Supervisor : MonoBehaviour
         return currentCapaData;
     }
 
-    private void updateTimeLine() {
-
+    private void createBarrel(int r) {
+        GameObject barrel = Instantiate(BarrelPrehab);
+        barrel.GetComponent<BarrelController>().init(this, dataFrame.operations[r], dataFrame.M);
+        barrel.name = "Order" + r;
     }
 }

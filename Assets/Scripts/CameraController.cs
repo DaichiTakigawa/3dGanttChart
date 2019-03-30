@@ -35,7 +35,7 @@ public class CameraController : MonoBehaviour
 
         transform.position += move_vac * move_speed * Time.deltaTime;
 
-        if (Input.GetMouseButton(1)) {
+        if (Input.GetAxis("Fire2") == 1f) {
              transform.Rotate(new Vector3(-Input.GetAxis("Mouse Y") * rotate_speed, Input.GetAxis("Mouse X") * rotate_speed, 0));
              float x = transform.rotation.eulerAngles.x;
              if (85 <= x && x <= 95) {
@@ -48,7 +48,7 @@ public class CameraController : MonoBehaviour
              transform.rotation = Quaternion.Euler(x, y, 0);
         }
 
-        if (Input.GetMouseButton(2)) {
+        if (Input.GetAxis("Fire3") == 1f) {
             Vector3 mouse_move_vec = new Vector3(-Input.GetAxis("Mouse X"), -Input.GetAxis("Mouse Y"), 0);
             transform.position += transform.rotation * mouse_move_vec * mouse_move_speed;
         }

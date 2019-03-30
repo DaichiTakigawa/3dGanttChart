@@ -202,7 +202,7 @@ public class ChartController : MonoBehaviour
             go.transform.rotation = this.transform.rotation;
             go.transform.rotation *= Quaternion.Euler(0, 0, 90f);
             MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
-            setFadeMaterial(meshRenderer, new Color(0.5f, 0.5f, 0, 0.2f));
+            setFadeMaterial(meshRenderer, new Color(0.5f, 0.5f, 0, 0.15f));
         }
         for (int m = 0; m < dataFrame.M; ++m) {
             GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -217,7 +217,7 @@ public class ChartController : MonoBehaviour
             go.transform.rotation = this.transform.rotation;
             go.transform.rotation *= Quaternion.Euler(90f, 0, 0);
             MeshRenderer meshRenderer = go.GetComponent<MeshRenderer>();
-            setFadeMaterial(meshRenderer, new Color(0.5f, 0.5f, 0, 0.2f));
+            setFadeMaterial(meshRenderer, new Color(0.5f, 0.5f, 0, 0.15f));
         }
 
         /* 時間を表す半透明Planeを配置 */
