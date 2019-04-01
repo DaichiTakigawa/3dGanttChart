@@ -20,6 +20,7 @@ public class Supervisor : MonoBehaviour
     private GameObject MachinePrehab;
     [SerializeField]
     private GameObject BarrelPrehab;
+    private List<BarrelController> barrels;
     private int nextR = 0;
 
 
@@ -35,7 +36,6 @@ public class Supervisor : MonoBehaviour
     }
 
     void FixedUpdate() {
-        
         if (!poseflag) floatTime += Time.fixedDeltaTime * timeSpeed;
         floatTime = Mathf.Min(floatTime, maxTime);
     }
@@ -55,7 +55,17 @@ public class Supervisor : MonoBehaviour
                 capacityText.text = currentCapaOfTime(currentTime);
                 timeText.text = timeFormatter(currentTime, true);
                 chartController.updateTimeLine(currentTime);
-                if (nextR < dataFrame.R && dataFrame.operations[nextR].t1[0] <= nTime) createBarrel(nextR++);
+                while (nextR < dataFrame.R && dataFrame.operations[nextR].t1[0] <= nTime) {
+                    createBarrel(nextR++);
+                }
+                var nbarrels = new List<BarrelController>();
+                foreach (var bc in barrels) {
+                    if (bc.barrelUpdate()) {
+                        nbarrels.Add(bc);
+                    }
+                }
+                barrels = nbarrels;
+                BarrelController.updateStoredOrders();
             }
         }
     }
@@ -63,7 +73,12 @@ public class Supervisor : MonoBehaviour
     void init() {
         currentMtoR = new List<int>(dataFrame.M);
         for (int m = 0; m < dataFrame.M; ++m) {
-            currentMtoR.Add(0);
+            for (int r = 0; r < dataFrame.R; ++r) {
+                if (dataFrame.operations[r].mTop[m] != -1) {
+                    currentMtoR.Add(r);
+                    break;
+                }
+            }
         }
         maxTime = dataFrame.MAX_D*DataFrame.SECONDS_A_DAY;
         for (int m = 0; m < dataFrame.M; ++m) {
@@ -71,6 +86,7 @@ public class Supervisor : MonoBehaviour
             go.GetComponent<MachineController>().init(m, dataFrame.M);
             go.name = "machine" + m;
         }
+        barrels = new List<BarrelController>();
     }
     void updateSituation(int time) {
         for (int m = 0; m < dataFrame.M; ++m) {
@@ -175,6 +191,7 @@ public class Supervisor : MonoBehaviour
     private void createBarrel(int r) {
         GameObject barrel = Instantiate(BarrelPrehab);
         barrel.GetComponent<BarrelController>().init(this, dataFrame.operations[r], dataFrame.M);
-        barrel.name = "Order" + r;
+        barrel.name = "order" + r;
+        barrels.Add(barrel.GetComponent<BarrelController>());
     }
 }

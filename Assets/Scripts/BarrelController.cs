@@ -1,65 +1,64 @@
 ﻿using System.Collections;
+using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class BarrelController : MonoBehaviour
 {
+    private static List<List<BarrelController>> MtoStoredOrders;
+    private static int M = 0;
     private float padding_bottom = 1f;
     [SerializeField]
     private Text barrelLabel;
     [SerializeField]
     private Image background;
-    private int p = 0;
-    private int M;
+    private int p = -1;
     private Supervisor supe;
     private Operation ope;
     private int MAX_D;
-    enum BarrelState {show, undergo, fade, store, freeze}
-    private BarrelState state;
+    enum State {show, undergo, fade, store}
+    private State state;
 
-    void Update() {
+    public bool barrelUpdate() {
         int time = supe.currentTime;
-        if (p == ope.bom.p)  return;
+        if (p == ope.bom.p)  return false;
+        if (ope.t2[ope.bom.p-1] < time) {
+            StartCoroutine("fade");
+            p = ope.bom.p;
+            return false;
+        }
 
-        if (state == BarrelState.freeze) {
-            if (ope.t1[p] <= time) state = BarrelState.show;
-        } else if (state == BarrelState.undergo) {
-            if (ope.t2[p] <= time) {
-                if (p+1 == ope.bom.p) state = BarrelState.fade;
-                else {
-                    if (ope.t1[p+1] <= time) {
-                        state = BarrelState.show;
-                        ++p;
-                        updateLabel();
-                    } else {
-                        state = BarrelState.store;
-                    }
-                }
+        int np = p;
+        while (np+1 < ope.bom.p && ope.t1[np+1] <= time) ++np;
+        
+
+        if (np == p) {
+            if (state == State.undergo && ope.t2[np] < time) {
+                store();
+                state = State.store;
+            }
+        } else {
+            p = np;
+            updateLabel();
+            if (ope.t1[p] <= time && time <= ope.t2[p]) {
+                StartCoroutine("show");
+                state = State.undergo;
+            } else {
+                store();
+                state = State.store;
             }
         }
 
-        if (state == BarrelState.show) {
-            StartCoroutine("show");
-            state = BarrelState.undergo;
-        } else if (state == BarrelState.store) {
-            store();
-            state = BarrelState.freeze;
-            ++p;
-            updateLabel();
-        } else if (state == BarrelState.fade) {
-            StartCoroutine("fade");
-            ++p;
-        } 
+        return true;
     }
 
     public void init(Supervisor _supe, Operation _ope, int _M) {
         supe = _supe;
         ope = _ope;
         M = _M;
-        state = BarrelState.freeze;
+        state = State.store;
         MAX_D = _supe.dataFrame.MAX_D;
-        updateLabel();
         float[] rgb = new float[3];
         int r = ope.r;
         for (int i = 0; i < 3; ++i) {
@@ -68,6 +67,9 @@ public class BarrelController : MonoBehaviour
                 rgb[i] = Mathf.Min(rgb[i], 1f);
         }
         background.color = new Color(rgb[0], rgb[1], rgb[2], 0.8f);
+        if (MtoStoredOrders == null) {
+            MtoStoredOrders = Enumerable.Range(0, M).Select((x) => new List<BarrelController>()).ToList();
+        }
     }
 
     private void updateLabel() {
@@ -98,11 +100,8 @@ public class BarrelController : MonoBehaviour
         yield break;
     }
     private void store() {
-        int m = ope.pTom[p];    
-        float x = 50f + (25f/(M == 1 ? 1 : M-1))*m + 20f + 20f;
-        float z = 50f + (95f/(M == 1 ? 1 : M-1))*m + 2f;
-        float y = padding_bottom;
-        transform.position = new Vector3(x, y, z);
+        int m = ope.pTom[p];
+        MtoStoredOrders[m].Add(this);
     }
 
     private IEnumerator fade() {
@@ -122,5 +121,24 @@ public class BarrelController : MonoBehaviour
         }
         Destroy(this.gameObject);
         yield break;
+    }
+
+    public static void updateStoredOrders() {
+        for (int m = 0; m < M; ++m) {
+            var nStoredOrders = new List<BarrelController>();
+            foreach (var bc in MtoStoredOrders[m]) {
+                if (bc.p == bc.ope.bom.p || bc.ope.pTom[bc.p] != m) continue;
+                nStoredOrders.Add(bc);
+            }
+            MtoStoredOrders[m] = nStoredOrders;
+            float x = 50f + (25f/(M == 1 ? 1 : M-1))*m + 20f + 10f;
+            float z = 50f + (95f/(M == 1 ? 1 : M-1))*m + 2f;
+            Vector3 pos = new Vector3(x, 0, z);
+            float between = 5f;
+            foreach (var storedOrder in MtoStoredOrders[m]) {
+                storedOrder.transform.position = pos;
+                pos += new Vector3(between, 0f, 0f);
+            }
+        }
     }
 }

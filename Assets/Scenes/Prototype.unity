@@ -987,7 +987,7 @@ MonoBehaviour:
   move_speed: 2
   rotate_speed: 1
   mouse_move_speed: 1
-  pan_speed: 10
+  pan_speed: 20
 --- !u!45 &648792198
 Skybox:
   m_ObjectHideFlags: 0
@@ -1579,7 +1579,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 1
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: 3d Asprova Visualizer
+  m_Text: 3d Asprova Procon Visualizer
 --- !u!222 &1363562340
 CanvasRenderer:
   m_ObjectHideFlags: 0

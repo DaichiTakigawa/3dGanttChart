@@ -18,10 +18,10 @@ public class CameraController : MonoBehaviour
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space)) {
-            move_speed *= 4f;
+            move_speed *= 10f;
         }
         if (Input.GetKeyUp(KeyCode.Space)) {
-            move_speed /= 4f;
+            move_speed /= 10f;
         }
 
         float horizontal = Input.GetAxis("Horizontal");
