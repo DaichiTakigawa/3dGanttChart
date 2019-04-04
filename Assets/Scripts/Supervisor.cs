@@ -15,13 +15,18 @@ public class Supervisor : MonoBehaviour
     public Text capacityText;
     public int currentTime = 0;
     public List<int> currentMtoR;
-    public bool poseflag = true;
+    public bool poseflag = false;
     [SerializeField]
     private GameObject MachinePrehab;
     [SerializeField]
     private GameObject BarrelPrehab;
     private List<BarrelController> barrels;
     private int nextR = 0;
+    [SerializeField]
+    // private float anime_time = 100f;
+    // private float anime_elapsed_time = 0f;
+    // private int day_count = 0;
+    // private bool animeFlag = false;
 
 
     // Start is called before the first frame update
@@ -67,7 +72,23 @@ public class Supervisor : MonoBehaviour
                 barrels = nbarrels;
                 BarrelController.updateStoredOrders();
             }
+            /*
+            int nday = (currentTime+DataFrame.SECONDS_A_DAY)/DataFrame.SECONDS_A_DAY;
+            if (nday != day_count) {
+                day_count = nday;
+                animeFlag = true;
+                timeText.text = timeFormatter((day_count-1)*DataFrame.SECONDS_A_DAY, true);
+                EmployeeController.employeeUpdate(day_count);
+                anime_elapsed_time = 0f;
+            }
+            */
         }
+        /*
+        if (animeFlag) {
+            if (anime_elapsed_time > anime_time) animeFlag = false;
+            anime_elapsed_time += Time.deltaTime;
+        }
+        */
     }
 
     void init() {
@@ -87,6 +108,7 @@ public class Supervisor : MonoBehaviour
             go.name = "machine" + m;
         }
         barrels = new List<BarrelController>();
+        // EmployeeController.init(dataFrame, anime_time);
     }
     void updateSituation(int time) {
         for (int m = 0; m < dataFrame.M; ++m) {
