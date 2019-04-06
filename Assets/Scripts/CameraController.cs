@@ -5,8 +5,6 @@ using UnityEngine;
 public class CameraController : MonoBehaviour
 {
     [SerializeField]
-    private float move_speed = 1f;
-    [SerializeField]
     private float rotate_speed = 1f;
     [SerializeField]
     private float mouse_move_speed = 1f;
@@ -17,24 +15,6 @@ public class CameraController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Space)) {
-            move_speed *= 10f;
-        }
-        if (Input.GetKeyUp(KeyCode.Space)) {
-            move_speed /= 10f;
-        }
-
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
-
-        Vector3 move_vac = transform.forward; 
-        move_vac.y = 0;
-        move_vac.Normalize();
-        move_vac = move_vac*vertical + (Quaternion.Euler(0, 90, 0) * move_vac)*horizontal;
-        move_vac.Normalize();
-
-        transform.position += move_vac * move_speed * Time.deltaTime;
-
         if (Input.GetAxis("Fire2") == 1f) {
              transform.Rotate(new Vector3(-Input.GetAxis("Mouse Y") * rotate_speed, Input.GetAxis("Mouse X") * rotate_speed, 0));
              float x = transform.rotation.eulerAngles.x;

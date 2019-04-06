@@ -1549,6 +1549,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4257849982454295109}
   - component: {fileID: 6751161038449822026}
+  - component: {fileID: 561459967195673603}
   m_Layer: 0
   m_Name: Machine
   m_TagString: Untagged
@@ -1588,3 +1589,19 @@ MonoBehaviour:
   machineLabels:
   - {fileID: 4257849980364134375}
   - {fileID: 4257849982404882469}
+--- !u!208 &561459967195673603
+NavMeshObstacle:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4257849982454295108}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Shape: 1
+  m_Extents: {x: 12, y: 2, z: 2}
+  m_MoveThreshold: 0.1
+  m_Carve: 1
+  m_CarveOnlyStationary: 1
+  m_Center: {x: 12, y: 2, z: 2}
+  m_TimeToStationary: 0.5

@@ -2,11 +2,15 @@
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.AI;
 
 public class EmployeeController : MonoBehaviour
 {
     [SerializeField]
     private Animator anime;
+    [SerializeField]
+    private Text idText;
     private static GameObject EmployeePrehab;
     private static List<int> dToC;
     private static List<List<int>> mdToC;
@@ -14,22 +18,21 @@ public class EmployeeController : MonoBehaviour
     private static int D;
     private static int MAX_EMP = 0;
     private static float anime_time;
-    private const int phase_size = 5;
-    private static float[] anime_phase_time = new float[phase_size];
     private static List<EmployeeController> employees;
     private static List<int> preids;
     private static List<int> nxtids;
     private static int lastid;
-    private static float start_time = 0f;
-    public bool animeFlag = false;
+    private static Vector3 exit = new Vector3(200f, 0f, 100f);
+    private static Supervisor supe; 
+    private bool moveFlag = false;
     public enum State {getIn, stay, getOut};
+    public State state;
     public int id;
     public int[] pos_m = new int[2];
     public int[] pos_i = new int[2];
-    public State animState;
-    private int phase = 0;
+    public float elapsed_time;
 
-    public static void init(DataFrame dataFrame, float _anime_time) {
+    public static void init(DataFrame dataFrame, float _anime_time, Supervisor _supe) {
         M = dataFrame.M;
         D = dataFrame.MAX_D;
         mdToC = dataFrame.mdToC;
@@ -43,9 +46,7 @@ public class EmployeeController : MonoBehaviour
             MAX_EMP = Mathf.Max(MAX_EMP, dToC[d]);
         }
         anime_time = _anime_time;
-        for (int i = 0; i < phase_size; ++i) {
-            anime_phase_time[i] = anime_time/phase_size*(i+1);
-        }
+        supe = _supe;
         employees = new List<EmployeeController>(MAX_EMP);
         preids = new List<int>(MAX_EMP);
         nxtids = new List<int>(MAX_EMP);
@@ -124,13 +125,13 @@ public class EmployeeController : MonoBehaviour
         List<int> mToI = Enumerable.Repeat(0, M).ToList();
         for (int i = 0; i < employees.Count; ++i) {
             if (idToState[employees[i].id] == State.getOut) {
-                employees[i].animState = State.getOut;
-                employees[i].animeFlag = true;
+                employees[i].state = State.getOut;
+                employees[i].moveFlag = true;
                 employees[i].pos_m[0] = employees[i].pos_m[1];
                 employees[i].pos_i[0] = employees[i].pos_i[1];
             } else {
-                employees[i].animState = State.stay;
-                employees[i].animeFlag = true;
+                employees[i].state = State.stay;
+                employees[i].moveFlag = true;
                 employees[i].pos_m[0] = employees[i].pos_m[1];
                 employees[i].pos_i[0] = employees[i].pos_i[1];
                 employees[i].pos_m[1] = idToDestM[employees[i].id];
@@ -141,238 +142,70 @@ public class EmployeeController : MonoBehaviour
 
         for (int i = 0; i < newids.Count; ++i) {
             GameObject go = Instantiate(EmployeePrehab);
-            go.name = "employee" + newids[i];
-            go.transform.rotation = Quaternion.Euler(0, 90f, 0);
-            go.transform.position = new Vector3(0f, 0f, 100f);
+            go.name = "employee" + (newids[i]+1);
+            go.transform.rotation = Quaternion.Euler(0, 90f + Random.Range(-2f, 2f), 0);
+            go.transform.position = new Vector3(0f, 0f, 100f + Random.Range(-10f, 10f));
             EmployeeController ec = go.GetComponent<EmployeeController>();
             ec.id = newids[i];
-            ec.animState = State.getIn;
-            ec.animeFlag = true;
+            ec.state = State.getIn;
+            ec.moveFlag = true;
             ec.pos_m[1] = idToDestM[newids[i]];
             ec.pos_i[1] = mToI[idToDestM[newids[i]]]++;
+            ec.idText.text = "Employee" + (newids[i]+1);
+            tmpEmployees.Add(ec);
         }
         employees = tmpEmployees;
         preids = nxtids;
-        start_time = Time.time;
+        lastid = (lastid+dToC[d])%MAX_EMP;
     }
 
     public void Update() {
-        if (animeFlag) {
-            if (animState == State.getIn) {
-                StartCoroutine("getIn");
-            } else if (animState == State.getOut) {
-                StartCoroutine("getOut");
+        if (moveFlag) {
+            anime.SetBool("run", true);
+            elapsed_time = 0f;
+            if (state == State.getIn) {
+                getIn();
+            } else if (state == State.stay) {
+                stay();
             } else {
-                StartCoroutine("stay");
+                getOut();
             }
+            moveFlag = false;
         }
+        if (anime.GetBool("run")) {
+            NavMeshAgent agent = GetComponent<NavMeshAgent>();
+            anime.SetFloat("speed", agent.velocity.magnitude*0.1f);
+            float x = 55f + (25f/(M==1 ? 1 : M-1))*pos_m[1] + pos_i[1]%15;
+            float z = 55f + (95f/(M==1 ? 1 : M-1))*pos_m[1] + pos_i[1]/15;
+            Vector3 goal = new Vector3(x, 0, z);
+            if (state != State.getOut && (transform.position-goal).magnitude < 2f) {
+                anime.SetBool("run", false);
+                anime.SetBool("idle", true);
+                agent.Warp(goal);
+                agent.velocity = Vector3.zero;
+                transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+            } 
+        }
+        if ((transform.position-exit).magnitude < 1f) {
+            Destroy(this.gameObject);
+        }
+        if (elapsed_time > anime_time) {
+            if (!supe.poseflag) anime.SetBool("idle", false);
+        }
+        elapsed_time += Time.deltaTime;
     }
 
-    private IEnumerator getIn() {
-        animeFlag = false;
-        float rot_time = 0f;
-        float move_time = 0f;
-        Quaternion start_rot = transform.rotation;
-        Vector3 start_pos = transform.position;
-        Quaternion aim_rot;
-        Vector3 aim_pos;
-        if (phase == 0) {
-            rot_time = 0;
-            move_time = anime_phase_time[0];
-            aim_rot = transform.rotation;
-            aim_pos = transform.position + (new Vector3(5f, 0f, 0f));
-        } else if (phase == 1) {
-            rot_time = (anime_phase_time[1]-anime_phase_time[0])*0.3f;
-            move_time = (anime_phase_time[1]-anime_phase_time[0])*0.7f;
-            bool foward = (pos_m[1] >= M/2f);
-            aim_rot = Quaternion.Euler(0f, (foward ? 0f : 180f), 0f);
-            float z = 50f + (95f/(M == 1 ? 1 : M-1))*pos_m[1];
-            aim_pos = new Vector3(transform.position.x, 0f, z+6f);
-        } else if (phase == 2) {
-            rot_time = (anime_phase_time[2]-anime_phase_time[1])*0.3f;
-            move_time = (anime_phase_time[2]-anime_phase_time[1])*0.7f;
-            aim_rot = Quaternion.Euler(0f, 90f, 0f);
-            float x = 55f + (25f/(M == 1 ? 1 : M-1))*pos_m[1];
-            float z = 50f + (95f/(M == 1 ? 1 : M-1))*pos_m[1];
-            aim_pos = new Vector3((x+pos_i[1]*0.5f-5f)/2f, 0f, transform.position.z);
-        } else if (phase == 3) {
-            rot_time = (anime_phase_time[3]-anime_phase_time[2])*0f;
-            move_time = (anime_phase_time[3]-anime_phase_time[2]);
-            aim_rot = Quaternion.Euler(0f, 90f, 0f);
-            float x = 55f + (25f/(M == 1 ? 1 : M-1))*pos_m[1];
-            float z = 50f + (95f/(M == 1 ? 1 : M-1))*pos_m[1];
-            aim_pos = new Vector3((x+pos_i[1]*0.5f), 0f, transform.position.z);
-        } else {
-            rot_time = (anime_phase_time[4]-anime_phase_time[4])*0.3f;
-            move_time = (anime_phase_time[4]-anime_phase_time[4])*0.7f;
-            aim_rot = Quaternion.Euler(0f, 180f, 0f);
-            float x = 55f + (25f/(M == 1 ? 1 : M-1))*pos_m[1];
-            float z = 50f + (95f/(M == 1 ? 1 : M-1))*pos_m[1];
-            aim_pos = new Vector3((x+pos_i[1]*0.5f), 0f, transform.position.z-1);
-        }
-        while (true) {
-            float elapsed_time = Time.time - start_time;
-            if (elapsed_time > anime_phase_time[phase]) break;
-            if (elapsed_time < anime_phase_time[phase]-move_time) {
-                transform.rotation = Quaternion.Lerp(start_rot, aim_rot, 1f-(anime_phase_time[phase]-move_time-elapsed_time)/(rot_time+0.0001f));
-            } else {
-                transform.position = start_pos + (aim_pos-start_pos)/(move_time+0.0001f)*(move_time-anime_phase_time[phase]+elapsed_time);
-            }
-            yield return null;
-        }
-        transform.rotation = aim_rot; transform.position = aim_pos;
-        ++phase;
-        if (phase != phase_size) animeFlag = true;
-        yield break;
+    private void getIn() {
+        float x = 55f + (25f/(M==1 ? 1 : M-1))*pos_m[1] + pos_i[1]%15;
+        float z = 55f + (95f/(M==1 ? 1 : M-1))*pos_m[1] + pos_i[1]/15;
+        GetComponent<NavMeshAgent>().destination = new Vector3(x, 0f, z);
     }
-
-    private IEnumerator stay() {
-        animeFlag = false;
-        float rot_time = 0f;
-        float move_time = 0f;
-        Quaternion start_rot = transform.rotation;
-        Vector3 start_pos = transform.position;
-        Quaternion aim_rot;
-        Vector3 aim_pos;
-        if (phase == 0) {
-            if (pos_m[0] == pos_m[1]) {
-                rot_time = anime_phase_time[0];
-                move_time = 0f;
-                bool foward = (pos_i[0] >= pos_i[1]);
-                aim_rot = Quaternion.Euler(0f, (foward ? -90f : 90f), 0f);
-                aim_pos = transform.position;
-            } else {
-                rot_time = anime_phase_time[0]*0.4f;
-                move_time = anime_phase_time[0]*0.6f;
-                aim_rot = Quaternion.Euler(0f, 0f, 0f);
-                aim_pos = transform.position + new Vector3(0f, 0f, 1f);
-            }
-        } else if (phase == 1) {
-            if (pos_m[0] == pos_m[1]) {
-                rot_time = 0f;
-                move_time = (anime_phase_time[1] - anime_phase_time[0]);
-                aim_rot = transform.rotation;
-                aim_pos = transform.position + new Vector3((pos_i[1]-pos_i[0])*0.1f/3, 0f, 0f);
-            } else {
-                rot_time = (anime_phase_time[1]-anime_phase_time[0])*0.3f;
-                move_time = (anime_phase_time[1]-anime_phase_time[0])*0.7f;
-                float x = 20f;
-                aim_rot = Quaternion.Euler(0f, -90f, 0f);
-                aim_pos = new Vector3(x, 0f, transform.position.z);
-            }
-        } else if (phase == 2) {
-            if (pos_m[0] == pos_m[1]) {
-                rot_time = 0f;
-                move_time = (anime_phase_time[2] - anime_phase_time[1]);
-                aim_rot = transform.rotation;
-                aim_pos = transform.position + new Vector3((pos_i[1]-pos_i[0])*0.1f/3, 0f, 0f);
-            } else {
-                rot_time = (anime_phase_time[2]-anime_phase_time[1])*0.3f;
-                move_time = (anime_phase_time[2]-anime_phase_time[1])*0.7f;
-                bool foward = (pos_m[1] > pos_m[0]);
-                float z = 50f + (95f/(M == 1 ? 1 : M-1))*pos_m[1];
-                aim_rot = Quaternion.Euler(0f, (foward ? 0f : 180f), 0f);
-                aim_pos = new Vector3(transform.position.x, 0f, z+1f);
-            }
-        } else if (phase == 3) {
-            if (pos_m[0] == pos_m[1]) {
-                rot_time = 0f;
-                move_time = (anime_phase_time[3] - anime_phase_time[2]);
-                aim_rot = transform.rotation;
-                float x = 50f + (25f/(M == 1 ? 1 : M-1))*pos_m[1];
-                aim_pos = new Vector3(x+pos_i[1]*0.1f, 0f, 0f);
-            } else {
-                rot_time = (anime_phase_time[3]-anime_phase_time[2])*0.3f;
-                move_time = (anime_phase_time[3]-anime_phase_time[2])*0.7f;
-                aim_rot = Quaternion.Euler(0f, 90f, 0f);
-                float x = 50f + (25f/(M == 1 ? 1 : M-1))*pos_m[1];
-                float z = 50f + (95f/(M == 1 ? 1 : M-1))*pos_m[1];
-                aim_pos = new Vector3(x+pos_i[1]*0.1f, 0f, z+1f);
-            }
-        } else {
-            if (pos_m[0] == pos_m[1]) {
-                rot_time = anime_phase_time[4]-anime_phase_time[3];
-                move_time = 0f;
-                aim_rot = Quaternion.Euler(0f, 180f, 0f);
-                aim_pos = transform.position;
-            } else {
-                rot_time = (anime_phase_time[4]-anime_phase_time[3])*0.3f;
-                move_time = (anime_phase_time[4]-anime_phase_time[3])*0.7f;
-                aim_rot = Quaternion.Euler(0f, 90f, 0f);
-                float x = 50f + (25f/(M == 1 ? 1 : M-1))*pos_m[1];
-                float z = 50f + (95f/(M == 1 ? 1 : M-1))*pos_m[1];
-                aim_pos = new Vector3((x+pos_i[1]*0.1f), 0f, transform.position.z-1f);
-            }
-        }
-        while (true) {
-            float elapsed_time = Time.time -start_time;
-            if (elapsed_time > anime_phase_time[phase]) break;
-            if (elapsed_time < anime_phase_time[phase]-move_time) {
-                transform.rotation = Quaternion.Lerp(start_rot, aim_rot, 1f-(anime_phase_time[phase]-move_time-elapsed_time)/(rot_time+0.0001f));
-            } else {
-                transform.position = (aim_pos-start_pos)/(move_time+0.0001f)*(move_time-anime_phase_time[phase]+elapsed_time);
-            }
-            yield return null;
-        }
-        transform.rotation = aim_rot; transform.position = aim_pos;
-        ++phase;
-        if (phase != phase_size) animeFlag = true;
-        yield break;
+    private void stay() {
+        float x = 55f + (25f/(M==1 ? 1 : M-1))*pos_m[1] + pos_i[1]%15;
+        float z = 55f + (95f/(M==1 ? 1 : M-1))*pos_m[1] + pos_i[1]/15;
+        GetComponent<NavMeshAgent>().destination = new Vector3(x, 0f, z);
     }
-
-    private IEnumerator getOut() {
-        animeFlag = false;
-        float rot_time = 0f;
-        float move_time = 0f;
-        Quaternion start_rot = transform.rotation;
-        Vector3 start_pos = transform.position;
-        Quaternion aim_rot;
-        Vector3 aim_pos;
-        if (phase == 0) {
-            rot_time = anime_phase_time[0]*0.3f;
-            move_time = anime_phase_time[0]*0.7f;
-            aim_rot = Quaternion.Euler(0f, 0f, 0f);
-            aim_pos = transform.position + new Vector3(0f, 0f, 1f);
-        } else if (phase == 1) {
-            rot_time = (anime_phase_time[1]-anime_phase_time[0])*0.3f;
-            move_time = (anime_phase_time[1]-anime_phase_time[0])*0.7f;
-            aim_rot = Quaternion.Euler(0f, 90f, 0f);
-            float x = 180f;
-            aim_pos = transform.position + new Vector3(x-transform.position.x, 0f, 0f)*0.5f; 
-        } else if (phase == 2) {
-            rot_time = 0f;
-            move_time = (anime_phase_time[2]-anime_phase_time[1]);
-            aim_rot = transform.rotation;
-            float x = 180f;
-            aim_pos = new Vector3(x, 0f, transform.position.z); 
-        } else if (phase == 3) {
-            rot_time = (anime_phase_time[3]-anime_phase_time[2])*0.3f;
-            move_time = (anime_phase_time[3]-anime_phase_time[2])*0.7f;
-            bool foward = (pos_m[0] <= M*0.5f);
-            aim_rot = Quaternion.Euler(0f, (foward ? 0f : 180f), 0f);
-            float x = 180f;
-            aim_pos = new Vector3(x, 0, 100f);
-        } else {
-            rot_time = (anime_phase_time[4]-anime_phase_time[4])*0.3f;
-            move_time = (anime_phase_time[4]-anime_phase_time[4])*0.7f;
-            aim_rot = Quaternion.Euler(0f, 90f, 0f);
-            aim_pos = new Vector3(200f, 0f, 100f);
-        }
-        while (true) {
-            float elapsed_time = Time.time - start_time;
-            if (elapsed_time > anime_phase_time[phase]) break;
-            if (elapsed_time < anime_phase_time[phase]-move_time) {
-                transform.rotation = Quaternion.Lerp(start_rot, aim_rot, 1f-(anime_phase_time[phase]-move_time-elapsed_time)/(rot_time+0.0001f));
-            } else {
-                transform.position = (aim_pos-start_pos)/(move_time+0.0001f)*(move_time-anime_phase_time[phase]+elapsed_time);
-            }
-            yield return null;
-        }
-        transform.rotation = aim_rot; transform.position = aim_pos;
-        ++phase;
-        if (phase != phase_size) animeFlag = true;
-        if (phase == phase_size) Destroy(this.gameObject);
-        yield break;
+    private void getOut() {
+        GetComponent<NavMeshAgent>().destination = exit;
     }
-
 }

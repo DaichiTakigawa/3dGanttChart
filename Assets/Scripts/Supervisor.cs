@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class Supervisor : MonoBehaviour
 {
+    public float defaultTimeSpeed = 10000f;
     public float timeSpeed = 1f;
     private float floatTime = 0f;
     private int maxTime;
@@ -23,10 +24,10 @@ public class Supervisor : MonoBehaviour
     private List<BarrelController> barrels;
     private int nextR = 0;
     [SerializeField]
-    // private float anime_time = 100f;
-    // private float anime_elapsed_time = 0f;
-    // private int day_count = 0;
-    // private bool animeFlag = false;
+    private float anime_time = 2f;
+    private float anime_elapsed_time = 0f;
+    private int day_count = 0;
+    private bool animeFlag = true;
 
 
     // Start is called before the first frame update
@@ -39,15 +40,23 @@ public class Supervisor : MonoBehaviour
         currentDataText.text = currentDataOfTime(currentTime);
         capacityText.text = currentCapaOfTime(currentTime);
     }
-
-    void FixedUpdate() {
-        if (!poseflag) floatTime += Time.fixedDeltaTime * timeSpeed;
-        floatTime = Mathf.Min(floatTime, maxTime);
-    }
-
     // Update is called once per frame
     void Update() {
-        if (!poseflag) {
+        if (!poseflag && !animeFlag) floatTime += Time.fixedDeltaTime * timeSpeed;
+        floatTime = Mathf.Min(floatTime, maxTime);
+        int nday = (currentTime+DataFrame.SECONDS_A_DAY)/DataFrame.SECONDS_A_DAY;
+        if (nday != day_count) {
+            day_count = nday;
+            animeFlag = true;
+            timeText.text = timeFormatter((day_count-1)*DataFrame.SECONDS_A_DAY, true);
+            EmployeeController.employeeUpdate(day_count);
+            anime_elapsed_time = 0f;
+        }
+        if (animeFlag) {
+            if (anime_elapsed_time > anime_time) animeFlag = false;
+            anime_elapsed_time += Time.deltaTime;
+        }
+        if (!poseflag && !animeFlag) {
             int nTime = (int)floatTime;
             if (nTime >= maxTime) {
                 nTime = maxTime;
@@ -72,23 +81,7 @@ public class Supervisor : MonoBehaviour
                 barrels = nbarrels;
                 BarrelController.updateStoredOrders();
             }
-            /*
-            int nday = (currentTime+DataFrame.SECONDS_A_DAY)/DataFrame.SECONDS_A_DAY;
-            if (nday != day_count) {
-                day_count = nday;
-                animeFlag = true;
-                timeText.text = timeFormatter((day_count-1)*DataFrame.SECONDS_A_DAY, true);
-                EmployeeController.employeeUpdate(day_count);
-                anime_elapsed_time = 0f;
-            }
-            */
         }
-        /*
-        if (animeFlag) {
-            if (anime_elapsed_time > anime_time) animeFlag = false;
-            anime_elapsed_time += Time.deltaTime;
-        }
-        */
     }
 
     void init() {
@@ -105,10 +98,10 @@ public class Supervisor : MonoBehaviour
         for (int m = 0; m < dataFrame.M; ++m) {
             GameObject go = Instantiate(MachinePrehab);
             go.GetComponent<MachineController>().init(m, dataFrame.M);
-            go.name = "machine" + m;
+            go.name = "machine" + (m+1);
         }
         barrels = new List<BarrelController>();
-        // EmployeeController.init(dataFrame, anime_time);
+        EmployeeController.init(dataFrame, anime_time, this);
     }
     void updateSituation(int time) {
         for (int m = 0; m < dataFrame.M; ++m) {
@@ -213,7 +206,7 @@ public class Supervisor : MonoBehaviour
     private void createBarrel(int r) {
         GameObject barrel = Instantiate(BarrelPrehab);
         barrel.GetComponent<BarrelController>().init(this, dataFrame.operations[r], dataFrame.M);
-        barrel.name = "order" + r;
+        barrel.name = "order" + (r+1);
         barrels.Add(barrel.GetComponent<BarrelController>());
     }
 }
